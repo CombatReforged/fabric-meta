@@ -23,19 +23,27 @@ import net.fabricmc.meta.web.models.*;
 import javax.xml.stream.XMLStreamException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class VersionDatabase {
 
-	public static final String MAVEN_URL = "https://maven.fabricmc.net/";
-	public static final String ALT_MAVEN_URL = "https://maven.combatreforged.com/";
+	public static final String[] MAVEN_URLS = {
+			"https://maven.fabricmc.net/",
+			"https://maven.combatreforged.com/"
+	};
+	//public static final String ALT_MAVEN_URL = "https://maven.combatreforged.com/";
 
-	public static final PomParser MAPPINGS_PARSER = new PomParser(ALT_MAVEN_URL + "net/fabricmc/yarn/maven-metadata.xml");
-	public static final PomParser INTERMEDIARY_PARSER = new PomParser(ALT_MAVEN_URL + "net/fabricmc/intermediary/maven-metadata.xml");
-	public static final PomParser LOADER_PARSER = new PomParser(MAVEN_URL + "net/fabricmc/fabric-loader/maven-metadata.xml");
-	public static final PomParser INSTALLER_PARSER = new PomParser(MAVEN_URL + "net/fabricmc/fabric-installer/maven-metadata.xml");
+	public static final PomParser[] MAPPINGS_PARSER = Arrays.stream(MAVEN_URLS)
+			.map((url) -> new PomParser(url + "net/fabricmc/yarn/maven-metadata.xml"))
+			.toArray(PomParser[]::new);
+	public static final PomParser[] INTERMEDIARY_PARSER = Arrays.stream(MAVEN_URLS)
+			.map((url) -> new PomParser(url + "net/fabricmc/intermediary/maven-metadata.xml"))
+			.toArray(PomParser[]::new);
+	public static final PomParser LOADER_PARSER = new PomParser(MAVEN_URLS[0] + "net/fabricmc/fabric-loader/maven-metadata.xml");
+	public static final PomParser INSTALLER_PARSER = new PomParser(MAVEN_URLS[0] + "net/fabricmc/fabric-installer/maven-metadata.xml");
 
 	public List<BaseVersion> game;
 	public List<MavenBuildGameVersion> mappings;
@@ -49,8 +57,11 @@ public class VersionDatabase {
 	public static VersionDatabase generate() throws IOException, XMLStreamException {
 		long start = System.currentTimeMillis();
 		VersionDatabase database = new VersionDatabase();
-		database.mappings = MAPPINGS_PARSER.getMeta(MavenBuildGameVersion::new, "net.fabricmc:yarn:");
-		database.intermediary = INTERMEDIARY_PARSER.getMeta(MavenVersion::new, "net.fabricmc:intermediary:");
+
+		database.mappings = new ArrayList<>();
+		database.intermediary = new ArrayList<>();
+		for (PomParser parser : MAPPINGS_PARSER) database.mappings.addAll(parser.getMeta(MavenBuildGameVersion::new, "net.fabricmc:yarn:"));
+		for (PomParser parser : INTERMEDIARY_PARSER) database.intermediary.addAll(parser.getMeta(MavenVersion::new, "net.fabricmc:intermediary:"));
 		database.loader = LOADER_PARSER.getMeta(MavenBuildVersion::new, "net.fabricmc:fabric-loader:");
 		database.installer = INSTALLER_PARSER.getMeta(MavenUrlVersion::new, "net.fabricmc:fabric-installer:");
 		database.loadMcData();
