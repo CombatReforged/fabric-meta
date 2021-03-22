@@ -153,18 +153,21 @@ public class ProfileHandler {
 		String[] split = mavenPath.split(":");
 		String path = String.format("%s/%s/%s", split[0].replaceAll("\\.","/"), split[1], split[2]);
 		String filename = String.format("%s-%s.jar", split[1], split[2]);
-		String url = "";
-		for (String mavenUrl : urls) {
+		String correctRepo = urls[urls.length - 1];
+		for (String repo : urls) {
 			try {
-				url = String.format("%s%s/%s", mavenUrl, path, filename);
+				String url = String.format("%s%s/%s", repo, path, filename);
 				HttpsURLConnection connection = (HttpsURLConnection) new URL(url).openConnection();
 				connection.connect();
-				if (connection.getResponseCode() == 200) break;
+				if (connection.getResponseCode() == 200) {
+					correctRepo = repo;
+					break;
+				}
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
 
-		return getLibrary(mavenPath, url);
+		return getLibrary(mavenPath, correctRepo);
 	}
 }
