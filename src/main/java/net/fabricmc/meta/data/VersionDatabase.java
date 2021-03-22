@@ -31,8 +31,8 @@ import java.util.stream.Collectors;
 public class VersionDatabase {
 
 	public static final String[] MAVEN_URLS = {
-			"https://maven.fabricmc.net/",
-			"https://maven.combatreforged.com/"
+			"https://maven.combatreforged.com/",
+			"https://maven.fabricmc.net/"
 	};
 	//public static final String ALT_MAVEN_URL = "https://maven.combatreforged.com/";
 
@@ -42,8 +42,8 @@ public class VersionDatabase {
 	public static final PomParser[] INTERMEDIARY_PARSER = Arrays.stream(MAVEN_URLS)
 			.map((url) -> new PomParser(url + "net/fabricmc/intermediary/maven-metadata.xml"))
 			.toArray(PomParser[]::new);
-	public static final PomParser LOADER_PARSER = new PomParser(MAVEN_URLS[0] + "net/fabricmc/fabric-loader/maven-metadata.xml");
-	public static final PomParser INSTALLER_PARSER = new PomParser(MAVEN_URLS[0] + "net/fabricmc/fabric-installer/maven-metadata.xml");
+	public static final PomParser LOADER_PARSER = new PomParser(MAVEN_URLS[1] + "net/fabricmc/fabric-loader/maven-metadata.xml");
+	public static final PomParser INSTALLER_PARSER = new PomParser(MAVEN_URLS[1] + "net/fabricmc/fabric-installer/maven-metadata.xml");
 
 	public List<BaseVersion> game;
 	public List<MavenBuildGameVersion> mappings;

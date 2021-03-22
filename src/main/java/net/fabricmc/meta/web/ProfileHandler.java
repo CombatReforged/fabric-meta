@@ -22,13 +22,16 @@ import net.fabricmc.meta.utils.LoaderMeta;
 import net.fabricmc.meta.web.models.LoaderInfoV2;
 import org.apache.commons.io.IOUtils;
 
+import javax.net.ssl.HttpsURLConnection;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
@@ -111,8 +114,8 @@ public class ProfileHandler {
 		JsonObject librariesObject = launcherMeta.get("libraries").getAsJsonObject();
 		// Build the libraries array with the existing libs + loader and intermediary
 		JsonArray libraries = (JsonArray) librariesObject.get("common");
-		libraries.add(getLibrary(info.getIntermediary().getMaven(), LoaderMeta.MAVEN_URL));
-		libraries.add(getLibrary(info.getLoader().getMaven(), LoaderMeta.MAVEN_URL));
+		libraries.add(getLibrary(info.getIntermediary().getMaven(), LoaderMeta.MAVEN_URLS));
+		libraries.add(getLibrary(info.getLoader().getMaven(), LoaderMeta.MAVEN_URLS));
 
 		if (librariesObject.has(side)) {
 			libraries.addAll(librariesObject.get(side).getAsJsonArray());
@@ -144,5 +147,24 @@ public class ProfileHandler {
 		jsonObject.addProperty("name", mavenPath);
 		jsonObject.addProperty("url", url);
 		return jsonObject;
+	}
+
+	private static JsonObject getLibrary(String mavenPath, String[] urls) {
+		String[] split = mavenPath.split(":");
+		String path = String.format("%s/%s/%s", split[0].replaceAll("\\.","/"), split[1], split[2]);
+		String filename = String.format("%s-%s.jar", split[1], split[2]);
+		String url = "";
+		for (String mavenUrl : urls) {
+			try {
+				url = String.format("%s%s/%s", mavenUrl, path, filename);
+				HttpsURLConnection connection = (HttpsURLConnection) new URL(url).openConnection();
+				connection.connect();
+				if (connection.getResponseCode() == 200) break;
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+
+		return getLibrary(mavenPath, url);
 	}
 }

@@ -21,6 +21,7 @@ import net.fabricmc.meta.web.WebServer;
 import net.fabricmc.meta.web.models.LoaderInfoBase;
 import org.apache.commons.io.FileUtils;
 
+import javax.net.ssl.HttpsURLConnection;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -29,34 +30,43 @@ import java.net.URL;
 
 public class LoaderMeta {
 
-	public static final File BASE_DIR = new File("metadata");
-	public static final String MAVEN_URL = "https://maven.fabricmc.net/";
+    public static final File BASE_DIR = new File("metadata");
+    public static final String[] MAVEN_URLS = {
+            "https://maven.combatreforged.com/",
+            "https://maven.fabricmc.net/"
+    };
 
-	public static JsonObject getMeta(LoaderInfoBase loaderInfo){
-		String loaderMaven = loaderInfo.getLoader().getMaven();
-		String[] split = loaderMaven.split(":");
-		String path = String.format("%s/%s/%s", split[0].replaceAll("\\.","/"), split[1], split[2]);
-		String filename = String.format("%s-%s.json", split[1], split[2]);
+    public static JsonObject getMeta(LoaderInfoBase loaderInfo) {
+        String loaderMaven = loaderInfo.getLoader().getMaven();
+        String[] split = loaderMaven.split(":");
+        String path = String.format("%s/%s/%s", split[0].replaceAll("\\.", "/"), split[1], split[2]);
+        String filename = String.format("%s-%s.json", split[1], split[2]);
 
-		File launcherMetaFile = new File(BASE_DIR, path + "/" + filename);
-		if(!launcherMetaFile.exists()){
-			try {
-				String url = String.format("%s%s/%s", MAVEN_URL, path, filename);
-				System.out.println("Downloading " + url);
-				FileUtils.copyURLToFile(new URL(url), launcherMetaFile);
-			} catch (IOException e) {
-				e.printStackTrace();
-				return null;
-			}
-		}
+        File launcherMetaFile = new File(BASE_DIR, path + "/" + filename);
+        if (!launcherMetaFile.exists()) {
+            try {
+                String url = "";
+                for (String mavenUrl : MAVEN_URLS) {
+                    url = String.format("%s%s/%s", mavenUrl, path, filename);
+                    HttpsURLConnection connection = (HttpsURLConnection) new URL(url).openConnection();
+                    connection.connect();
+                    if (connection.getResponseCode() == 200) break;
+                }
+                System.out.println("Downloading " + url);
+                FileUtils.copyURLToFile(new URL(url), launcherMetaFile);
+            } catch (IOException e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
 
-		try {
-			JsonObject jsonObject = WebServer.GSON.fromJson(new FileReader(launcherMetaFile), JsonObject.class);
-			return jsonObject;
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-			return null;
-		}
-	}
+        try {
+            JsonObject jsonObject = WebServer.GSON.fromJson(new FileReader(launcherMetaFile), JsonObject.class);
+            return jsonObject;
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
 
 }
