@@ -58,6 +58,7 @@ public class VersionDatabase {
 		for (PomParser parser : MAPPINGS_PARSER) {
 			database.mappings.addAll(parser.getMeta(MavenBuildGameVersion::new, "net.fabricmc:yarn:"));
 		}
+		database.intermediary = new ArrayList<>();
 		for (PomParser parser : INTERMEDIARY_PARSER) {
 			database.intermediary.addAll(parser.getMeta(MavenVersion::new, "net.fabricmc:intermediary:"));
 		}
