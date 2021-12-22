@@ -59,7 +59,7 @@ public class VersionDatabase {
 			database.mappings.addAll(parser.getMeta(MavenBuildGameVersion::new, "net.fabricmc:yarn:"));
 		}
 		for (PomParser parser : INTERMEDIARY_PARSER) {
-			database.intermediary.addAll(parser.getMeta(MavenBuildGameVersion::new, "net.fabricmc:intermediary:"));
+			database.intermediary.addAll(parser.getMeta(MavenVersion::new, "net.fabricmc:intermediary:"));
 		}
 		database.loader = LOADER_PARSER.getMeta(MavenBuildVersion::new, "net.fabricmc:fabric-loader:", list -> {
 			for (BaseVersion version : list) {
