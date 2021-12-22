@@ -22,10 +22,7 @@ import net.fabricmc.meta.web.models.*;
 
 import javax.xml.stream.XMLStreamException;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class VersionDatabase {
@@ -48,7 +45,7 @@ public class VersionDatabase {
 	public List<BaseVersion> game;
 	public List<MavenBuildGameVersion> mappings;
 	public List<MavenVersion> intermediary;
-	public List<MavenBuildVersion> loader;
+	private List<MavenBuildVersion> loader;
 	public List<MavenUrlVersion> installer;
 
 	private VersionDatabase() {
@@ -57,12 +54,21 @@ public class VersionDatabase {
 	public static VersionDatabase generate() throws IOException, XMLStreamException {
 		long start = System.currentTimeMillis();
 		VersionDatabase database = new VersionDatabase();
-
 		database.mappings = new ArrayList<>();
-		database.intermediary = new ArrayList<>();
-		for (PomParser parser : MAPPINGS_PARSER) database.mappings.addAll(parser.getMeta(MavenBuildGameVersion::new, "net.fabricmc:yarn:"));
-		for (PomParser parser : INTERMEDIARY_PARSER) database.intermediary.addAll(parser.getMeta(MavenVersion::new, "net.fabricmc:intermediary:"));
-		database.loader = LOADER_PARSER.getMeta(MavenBuildVersion::new, "net.fabricmc:fabric-loader:");
+		for (PomParser parser : MAPPINGS_PARSER) {
+			database.mappings.addAll(parser.getMeta(MavenBuildGameVersion::new, "net.fabricmc:yarn:"));
+		}
+		for (PomParser parser : INTERMEDIARY_PARSER) {
+			database.intermediary.addAll(parser.getMeta(MavenBuildGameVersion::new, "net.fabricmc:intermediary:"));
+		}
+		database.loader = LOADER_PARSER.getMeta(MavenBuildVersion::new, "net.fabricmc:fabric-loader:", list -> {
+			for (BaseVersion version : list) {
+				if (isPublicLoaderVersion(version)) {
+					version.setStable(true);
+					break;
+				}
+			}
+		});
 		database.installer = INSTALLER_PARSER.getMeta(MavenUrlVersion::new, "net.fabricmc:fabric-installer:");
 		database.loadMcData();
 		System.out.println("DB update took " + (System.currentTimeMillis() - start) + "ms");
@@ -73,12 +79,21 @@ public class VersionDatabase {
 		if (mappings == null || intermediary == null) {
 			throw new RuntimeException("Mappings are null");
 		}
-		MinecraftLauncherMeta launcherMeta = MinecraftLauncherMeta.getMeta();
+		MinecraftLauncherMeta launcherMeta = MinecraftLauncherMeta.getAllMeta();
 
 		//Sorts in the order of minecraft release dates
 		intermediary = new ArrayList<>(intermediary);
 		intermediary.sort(Comparator.comparingInt(o -> launcherMeta.getIndex(o.getVersion())));
 		intermediary.forEach(version -> version.setStable(true));
+
+		// Remove entries that do not match a valid mc version.
+		intermediary.removeIf(o -> {
+			if (launcherMeta.getVersions().stream().noneMatch(version -> version.getId().equals(o.getVersion()))) {
+				System.out.println("Removing " + o.getVersion() + " as it is not match an mc version");
+				return true;
+			}
+			return false;
+		});
 
 		List<String> minecraftVersions = new ArrayList<>();
 		for (MavenVersion gameVersion : intermediary) {
@@ -87,18 +102,18 @@ public class VersionDatabase {
 			}
 		}
 
-		//1.14_combat-0/1.14_combat-3 was floating around the list as it doesnt have an official release date, this forces it to the bottom of the list.
-		String oldMcVersion = "combat";
-		minecraftVersions.sort((o1, o2) -> {
-			if (o1.contains(oldMcVersion) && !o2.contains(oldMcVersion)) {
-				return 1;
-			} else if (!o1.contains(oldMcVersion) && o2.contains(oldMcVersion)) {
-				return -1;
-			}
-			return 0;
-		});
-
 		game = minecraftVersions.stream().map(s -> new BaseVersion(s, launcherMeta.isStable(s))).collect(Collectors.toList());
 	}
 
+	public List<MavenBuildVersion> getLoader() {
+		return loader.stream().filter(VersionDatabase::isPublicLoaderVersion).collect(Collectors.toList());
+	}
+	
+	private static boolean isPublicLoaderVersion(BaseVersion version) {
+		return true;
+	}
+
+	public List<MavenBuildVersion> getAllLoader() {
+		return Collections.unmodifiableList(loader);
+	}
 }

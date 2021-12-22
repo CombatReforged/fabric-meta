@@ -17,6 +17,7 @@
 package net.fabricmc.meta.web;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.fabricmc.meta.utils.LoaderMeta;
 import net.fabricmc.meta.web.models.LoaderInfoV2;
@@ -31,7 +32,6 @@ import java.net.URL;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
@@ -130,11 +130,29 @@ public class ProfileHandler {
 		profile.addProperty("time", currentTime);
 		profile.addProperty("type", "release");
 
-		profile.addProperty("mainClass", launcherMeta.get("mainClass").getAsJsonObject().get(side).getAsString());
+		JsonElement mainClassElement = launcherMeta.get("mainClass");
+		String mainClass;
+
+		if (mainClassElement.isJsonObject()) {
+			mainClass = mainClassElement.getAsJsonObject().get(side).getAsString();
+		} else {
+			mainClass = mainClassElement.getAsString();
+		}
+
+		profile.addProperty("mainClass", mainClass);
+
+		JsonObject arguments = new JsonObject();
 
 		// I believe this is required to stop the launcher from complaining
-		JsonObject arguments = new JsonObject();
 		arguments.add("game", new JsonArray());
+
+		if (side.equals("client")) {
+			// add '-DFabricMcEmu= net.minecraft.client.main.Main ' to emulate vanilla MC presence for programs that check the process command line (discord, nvidia hybrid gpu, ..)
+			JsonArray jvmArgs = new JsonArray();
+			jvmArgs.add("-DFabricMcEmu= net.minecraft.client.main.Main ");
+			arguments.add("jvm", jvmArgs);
+		}
+
 		profile.add("arguments", arguments);
 
 		profile.add("libraries", libraries);
