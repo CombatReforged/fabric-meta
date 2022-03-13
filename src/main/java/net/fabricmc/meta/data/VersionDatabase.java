@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 public class VersionDatabase {
 
 	public static final String[] MAVEN_URLS = {
-			"https://maven.combatreforged.com/",
+			"https://nexus.combatreforged.com/repository/combatreforged/",
 			"https://maven.fabricmc.net/"
 	};
 	//public static final String ALT_MAVEN_URL = "https://maven.combatreforged.com/";
